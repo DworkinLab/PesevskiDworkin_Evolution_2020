@@ -1,0 +1,99 @@
+getwd()
+q()
+library(data.table)#
+#
+############ Read in the data ############
+#
+setwd("../data")#
+wings <- read.csv( "MP_African2016_AllPoints_Output_Landmarks+Veins+Outline.csv", header=TRUE )#
+#
+############# Create population variable #############
+#We are going to create a population level variable for Ethiopia and Zambia#
+# Extract first character only#
+pop_dummy <- substr(wings$line, 1,1)#
+wings$population <- ifelse(pop_dummy == "z", "Zambia", "Ethiopia")#
+wings$population <- factor(wings$population)
+SplineBatch <- unique(wings$SplineBatch)#
+#
+scaleFactor <- c(182, 182, 182, 188, 218, 218, 206)#
+#
+dummy_variables <- data.frame(SplineBatch, scaleFactor)#
+#
+wings <- merge(wings, dummy_variables, #
+    by.x= "SplineBatch", by.y = "SplineBatch")#
+#And now recompute our centroid size by dividing by scale factor and multipling by 144#
+wings$CS_rescaled <- with(wings, (CS/scaleFactor)*144)#
+############# Fix the lines with unclear names #############
+#fix names section (for original file)#
+#  ef39n_95n females are ef39n females. rename in full dataset. #
+#
+levels(wings$line)#
+crap <- ifelse(wings$line =="ef39n_95n", "ef39n", as.character(wings$line))#
+wings$line <- factor(crap)#
+#
+#  the ones with the "-1.tif" are 86n males, not ef96n males. So rename these after. (Maybe do this manually in the file!).#
+# the problem ones that are really 86n males.#
+wings$FileName[(grepl("ef96", wings$FileName)) & (grepl("-1.tif", wings$FileName))]#
+#
+index1 <- (grepl("ef96", wings$FileName)) & (grepl("-1.tif", wings$FileName))#
+crap2 <- ifelse(index1, "86n", as.character(wings$line))#
+wings$line <- factor(crap2)#
+#
+############ Remove lines with small sample sizes #############
+#
+# Remove lines with very small sample sizes.#
+# Does not like the lines with only one sex or with low sample size, so redo analyses with the data subset#
+mydf <- wings#
+#
+df2 <- mydf[with(mydf, as.logical(ave(as.character(line), line, #
+                               FUN = function(x) length(x) > 25))),]#
+dim(mydf)#
+dim(df2)#
+df2$line <- droplevels(df2$line)#
+df2$sex <- droplevels(df2$sex)#
+#
+############ Add "ef" to lines that did not have it ################
+#
+lines_without_ef <- grepl(pattern = "^[0-9]", df2$line)#
+lines_without_ef2 <- ifelse(lines_without_ef, #
+    paste("ef",df2$line, sep = ""),#
+    as.character(df2$line))#
+lines_without_ef2 <- as.factor(lines_without_ef2)#
+df2$line <- lines_without_ef2#
+#
+#make sure to remove the script that does this from the integration file.
+# If you are in the directory with the analysis script this will work. #
+source('~/Dropbox/Dworkin_lab/DworkinLabSharedMaterial/scripts/WRP_FUNCTIONS.R', chdir = TRUE)#
+#
+source('~/Dropbox/Dworkin_lab/DworkinLabSharedMaterial/scripts/WINGPLOTSOURCE.R', chdir = TRUE)#
+#
+source('~/Dropbox/Dworkin_lab/DworkinLabSharedMaterial/scripts/ID_LeveneStat_V1_2016.R', chdir = TRUE)
+wings = df2#
+#
+# Check that we are using the aligned specimens#
+WingBlur(df2[1:50,10:105])#
+#
+p <- ggplot(wings, aes(x = population:sex, y = CS_rescaled, color= sex)) + #
+   geom_boxplot(outlier.shape = NA, show.legend= FALSE) + labs(y = "wing size", x = " Population by Sex")#
+p#
+p <- p + geom_jitter(shape=16, size = 0.7, position=position_jitter(0.1), show.legend= FALSE)#
+#
+p
+p <- ggplot(wings, aes(x = population:sex, y = CS_rescaled, color= sex)) + #
+   geom_boxplot(outlier.shape = NA, show.legend= FALSE) + labs(y = "wing size", x = " Population by Sex")#
+p#
+p <- p + geom_jitter(shape=16, size = 0.7, position=position_jitter(0.1), show.legend= FALSE)#
+#
+p
+library(lattice)#
+library(effects)#
+library(car)#
+library(ggplot2)#
+library(lme4)#
+library(MCMCglmm)
+p <- ggplot(wings, aes(x = population:sex, y = CS_rescaled, color= sex)) + #
+   geom_boxplot(outlier.shape = NA, show.legend= FALSE) + labs(y = "wing size", x = " Population by Sex")#
+p#
+p <- p + geom_jitter(shape=16, size = 0.7, position=position_jitter(0.1), show.legend= FALSE)#
+#
+p
